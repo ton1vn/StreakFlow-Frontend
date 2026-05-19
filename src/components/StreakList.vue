@@ -1,19 +1,22 @@
 <template>
   <div>
-    <h2>Meine Streaks</h2>
+    <h2>Meine Übungen</h2>
 
     <ul>
-      <li v-for="streak in streaks" :key="streak.id">
-        {{ streak.name }} – {{ streak.count }} Tage
+      <li v-for="exercise in exercises" :key="exercise.id">
+        {{ exercise.name }} – {{ exercise.category }} – {{ exercise.targetMinutesPerDay }} Minuten
       </li>
     </ul>
   </div>
 </template>
 
-<script setup>
-const streaks = [
-  { id: 1, name: "Sport", count: 5 },
-  { id: 2, name: "Lesen", count: 10 },
-  { id: 3, name: "Coding", count: 3 }
-]
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+
+const exercises = ref([])
+
+onMounted(async () => {
+  const response = await fetch('https://streakflow-backend-k8hh.onrender.com/exercises')
+  exercises.value = await response.json()
+})
 </script>
