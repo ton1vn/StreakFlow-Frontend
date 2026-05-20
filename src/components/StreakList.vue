@@ -13,7 +13,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 
-const exercises = ref([])
+interface Exercise {
+  id: number
+  name: string
+  category: string
+  targetMinutesPerDay: number
+}
+
+const exercises = ref<Exercise[]>([])
 
 onMounted(async () => {
   const response = await fetch('https://streakflow-backend-k8hh.onrender.com/exercises')
