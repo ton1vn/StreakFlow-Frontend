@@ -100,7 +100,11 @@ const topCategory = computed(() => {
     return counts
   }, {})
 
-  return Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0][0]
+  const sortedCategories = Object.entries(categoryCounts).sort(
+    (a, b) => b[1] - a[1]
+  )
+
+  return sortedCategories[0]?.[0] ?? '-'
 })
 
 async function loadExercises() {
