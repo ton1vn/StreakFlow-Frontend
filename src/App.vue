@@ -1,22 +1,34 @@
 <script setup lang="ts">
+import ProgressDashboard from './components/ProgressDashboard.vue'
 import StreakList from './components/StreakList.vue'
 </script>
 
 <template>
   <main class="app-shell">
+
     <section class="hero">
       <p class="hero-badge">StreakFlow</p>
-      <h1>Baue Fitness-Gewohnheiten auf, die bleiben.</h1>
-      <p>
-        Tracke Übungen, Tagesziele und Fortschritt in einer klaren Übersicht.
+
+      <h1>
+        Baue Fitness-Gewohnheiten auf,
+        die bleiben.
+      </h1>
+
+      <p class="hero-text">
+        Tracke Übungen, Tagesziele und Fortschritt
+        in einer klaren Übersicht.
       </p>
     </section>
 
+    <ProgressDashboard />
+
     <StreakList />
+
   </main>
 </template>
 
 <style scoped>
+
 .app-shell {
   width: min(1180px, 100%);
   margin: 0 auto;
@@ -44,9 +56,11 @@ h1 {
   letter-spacing: -0.08em;
 }
 
-.hero p:last-child {
+.hero-text {
   max-width: 620px;
   color: #94a3b8;
   font-size: 1.1rem;
+  margin-bottom: 2rem;
 }
+
 </style>
