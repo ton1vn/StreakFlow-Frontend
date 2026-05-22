@@ -39,10 +39,21 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
 
-const progress = ref({
+interface Progress {
+  currentStreak: number
+  longestStreak: number
+  xp: number
+  level: number
+  coins: number
+  streakFreezers: number
+  completedToday: number
+  dailyGoal: number
+}
+
+const progress = ref<Progress>({
   currentStreak: 0,
   longestStreak: 0,
   xp: 0,
@@ -50,7 +61,7 @@ const progress = ref({
   coins: 0,
   streakFreezers: 0,
   completedToday: 0,
-  dailyGoal: 1
+  dailyGoal: 1,
 })
 
 const xpPercent = computed(() => {
