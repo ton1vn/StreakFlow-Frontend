@@ -5,7 +5,7 @@
         <p class="eyebrow">Live-Daten aus dem Backend</p>
         <h2>Trainingsübersicht</h2>
         <p class="section-description">
-          Deine Übungen werden direkt aus der Render-API geladen.
+          Übungen werden aus der PostgreSQL-Datenbank geladen und neue Einträge direkt gespeichert.
         </p>
       </div>
 
@@ -13,6 +13,36 @@
         {{ loading ? 'Lädt ...' : 'Aktualisieren' }}
       </button>
     </div>
+
+    <form class="exercise-form" @submit.prevent="createExercise">
+      <label>
+        Übung
+        <input v-model.trim="newExercise.name" type="text" name="name" placeholder="z. B. Schwimmen" required />
+      </label>
+
+      <label>
+        Kategorie
+        <input v-model.trim="newExercise.category" type="text" name="category" placeholder="Cardio" required />
+      </label>
+
+      <label>
+        Tagesziel in Minuten
+        <input
+          v-model.number="newExercise.targetMinutesPerDay"
+          type="number"
+          name="targetMinutesPerDay"
+          min="1"
+          max="240"
+          required
+        />
+      </label>
+
+      <button class="save-button" type="submit" :disabled="saving">
+        {{ saving ? 'Speichert ...' : 'Übung speichern' }}
+      </button>
+    </form>
+
+    <p v-if="saveMessage" class="save-message">{{ saveMessage }}</p>
 
     <div v-if="loading" class="state-box">
       <div class="spinner"></div>
@@ -43,7 +73,12 @@
         </article>
       </div>
 
-      <div class="exercise-grid">
+      <div v-if="exercises.length === 0" class="empty-state">
+        <strong>Noch keine Übungen gespeichert.</strong>
+        <p>Lege die erste Übung an, damit sie in der Datenbank landet.</p>
+      </div>
+
+      <div v-else class="exercise-grid">
         <article v-for="exercise in exercises" :key="exercise.id" class="exercise-card">
           <div class="exercise-card-header">
             <div class="exercise-icon">{{ exercise.name.charAt(0) }}</div>
@@ -71,7 +106,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 
 interface Exercise {
   id: number
@@ -80,11 +115,26 @@ interface Exercise {
   targetMinutesPerDay: number
 }
 
-const API_URL = 'https://streakflow-backend-k8hh.onrender.com/exercises'
+interface NewExercise {
+  name: string
+  category: string
+  targetMinutesPerDay: number
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://streakflow-backend-k8hh.onrender.com'
+const EXERCISES_URL = `${API_BASE_URL}/exercises`
 
 const exercises = ref<Exercise[]>([])
 const loading = ref(true)
+const saving = ref(false)
 const error = ref('')
+const saveMessage = ref('')
+
+const newExercise = reactive<NewExercise>({
+  name: '',
+  category: '',
+  targetMinutesPerDay: 30,
+})
 
 const totalTargetMinutes = computed(() =>
   exercises.value.reduce((sum, exercise) => sum + exercise.targetMinutesPerDay, 0),
@@ -100,9 +150,7 @@ const topCategory = computed(() => {
     return counts
   }, {})
 
-  const sortedCategories = Object.entries(categoryCounts).sort(
-    (a, b) => b[1] - a[1]
-  )
+  const sortedCategories = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])
 
   return sortedCategories[0]?.[0] ?? '-'
 })
@@ -112,7 +160,7 @@ async function loadExercises() {
   error.value = ''
 
   try {
-    const response = await fetch(API_URL)
+    const response = await fetch(EXERCISES_URL)
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
@@ -123,6 +171,36 @@ async function loadExercises() {
     error.value = caughtError instanceof Error ? caughtError.message : 'Unbekannter Fehler'
   } finally {
     loading.value = false
+  }
+}
+
+async function createExercise() {
+  saving.value = true
+  saveMessage.value = ''
+  error.value = ''
+
+  try {
+    const response = await fetch(EXERCISES_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(newExercise),
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+
+    newExercise.name = ''
+    newExercise.category = ''
+    newExercise.targetMinutesPerDay = 30
+    saveMessage.value = 'Übung wurde in der Datenbank gespeichert.'
+    await loadExercises()
+  } catch (caughtError) {
+    error.value = caughtError instanceof Error ? caughtError.message : 'Unbekannter Fehler'
+  } finally {
+    saving.value = false
   }
 }
 
@@ -172,7 +250,42 @@ h2 {
   color: #94a3b8;
 }
 
-.refresh-button {
+.exercise-form {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 0.8fr auto;
+  gap: 1rem;
+  align-items: end;
+  padding: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 22px;
+  background: rgba(30, 41, 59, 0.64);
+}
+
+.exercise-form label {
+  display: grid;
+  gap: 0.45rem;
+  color: #cbd5e1;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.exercise-form input {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 14px;
+  padding: 0.78rem 0.9rem;
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.88);
+  font: inherit;
+}
+
+.exercise-form input:focus {
+  outline: 2px solid rgba(34, 197, 94, 0.45);
+  border-color: rgba(34, 197, 94, 0.8);
+}
+
+.refresh-button,
+.save-button {
   border: 0;
   border-radius: 999px;
   padding: 0.8rem 1.15rem;
@@ -180,6 +293,18 @@ h2 {
   background: linear-gradient(135deg, #86efac, #22c55e);
   font-weight: 800;
   cursor: pointer;
+}
+
+.refresh-button:disabled,
+.save-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.save-message {
+  margin: 0.9rem 0 0;
+  color: #bbf7d0;
+  font-weight: 700;
 }
 
 .stats-grid,
@@ -207,6 +332,19 @@ h2 {
   color: #f8fafc;
   font-size: 1.6rem;
   font-weight: 850;
+}
+
+.empty-state {
+  margin-top: 1.5rem;
+  padding: 1.4rem;
+  border: 1px dashed rgba(148, 163, 184, 0.36);
+  border-radius: 22px;
+  color: #cbd5e1;
+  text-align: center;
+}
+
+.empty-state strong {
+  color: #f8fafc;
 }
 
 .exercise-card:hover {
@@ -297,13 +435,24 @@ h3 {
   }
 }
 
+@media (max-width: 960px) {
+  .exercise-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .save-button {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 860px) {
   .section-header {
     flex-direction: column;
   }
 
   .stats-grid,
-  .exercise-grid {
+  .exercise-grid,
+  .exercise-form {
     grid-template-columns: 1fr;
   }
 }
