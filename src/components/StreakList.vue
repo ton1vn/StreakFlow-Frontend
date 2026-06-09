@@ -91,6 +91,14 @@
               <h3>{{ exercise.name }}</h3>
               <span class="category-badge">{{ exercise.category }}</span>
             </div>
+            <button
+              class="delete-button"
+              type="button"
+              :disabled="deletingId === exercise.id"
+              @click="deleteExercise(exercise)"
+            >
+              {{ deletingId === exercise.id ? 'Entfernt ...' : 'Entfernen' }}
+            </button>
           </div>
 
           <div class="target-row">
@@ -170,6 +178,7 @@ const executions = ref<ExerciseExecution[]>([])
 const loading = ref(true)
 const saving = ref(false)
 const completingId = ref<number | null>(null)
+const deletingId = ref<number | null>(null)
 const error = ref('')
 const message = ref('')
 const completionMinutes = reactive<Record<number, number>>({})
@@ -286,6 +295,32 @@ async function createExercise() {
     error.value = caughtError instanceof Error ? caughtError.message : 'Unbekannter Fehler'
   } finally {
     saving.value = false
+  }
+}
+
+async function deleteExercise(exercise: Exercise) {
+  deletingId.value = exercise.id
+  message.value = ''
+  error.value = ''
+
+  try {
+    const response = await fetch(EXERCISES_URL + '/' + exercise.id, {
+      method: 'DELETE',
+    })
+
+    if (!response.ok) {
+      throw new Error('HTTP ' + response.status)
+    }
+
+    exercises.value = exercises.value.filter((storedExercise) => storedExercise.id !== exercise.id)
+    executions.value = executions.value.filter((execution) => execution.exerciseId !== exercise.id)
+    delete completionMinutes[exercise.id]
+    message.value = exercise.name + ' wurde entfernt.'
+    notifyProgressChanged()
+  } catch (caughtError) {
+    error.value = caughtError instanceof Error ? caughtError.message : 'Unbekannter Fehler'
+  } finally {
+    deletingId.value = null
   }
 }
 
@@ -422,9 +457,21 @@ h2 {
   min-width: 136px;
 }
 
+.delete-button {
+  margin-left: auto;
+  border: 1px solid rgba(248, 113, 113, 0.32);
+  border-radius: 999px;
+  padding: 0.6rem 0.85rem;
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.28);
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .refresh-button:disabled,
 .save-button:disabled,
-.complete-button:disabled {
+.complete-button:disabled,
+.delete-button:disabled {
   cursor: default;
   opacity: 0.68;
 }
@@ -605,6 +652,14 @@ h3 {
   .exercise-form,
   .completion-row {
     grid-template-columns: 1fr;
+  }
+
+  .exercise-card-header {
+    align-items: flex-start;
+  }
+
+  .delete-button {
+    margin-left: 0;
   }
 }
 </style>
