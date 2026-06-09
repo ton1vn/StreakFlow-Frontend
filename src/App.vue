@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ProgressDashboard from './components/ProgressDashboard.vue'
+import ShopSection from './components/ShopSection.vue'
 import StreakList from './components/StreakList.vue'
 </script>
 
@@ -21,6 +22,8 @@ import StreakList from './components/StreakList.vue'
     </section>
 
     <ProgressDashboard />
+
+    <ShopSection />
 
     <StreakList />
 
