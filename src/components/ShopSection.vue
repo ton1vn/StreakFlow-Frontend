@@ -73,13 +73,13 @@ const fallbackItems: ShopItem[] = [
   {
     id: 'xp-boost',
     name: 'XP Boost',
-    cost: 10,
+    cost: 30,
     description: 'Verdoppelt die XP deiner nächsten bestätigten Übung.',
   },
   {
     id: 'streak-freeze',
     name: 'StreakFreeze',
-    cost: 25,
+    cost: 50,
     description: 'Schützt deine Streak, wenn du einen Tag verpasst.',
   },
 ]
@@ -101,23 +101,32 @@ function notifyProgressChanged() {
 async function loadShop() {
   error.value = ''
 
+  await Promise.all([loadItems(), loadProgress()])
+}
+
+async function loadItems() {
   try {
-    const [itemsResponse, progressResponse] = await Promise.all([
-      fetch(API_BASE_URL + '/shop/items'),
-      fetch(API_BASE_URL + '/progress'),
-    ])
+    const response = await fetch(API_BASE_URL + '/shop/items')
 
-    if (itemsResponse.ok) {
-      items.value = await itemsResponse.json()
+    if (response.ok) {
+      items.value = await response.json()
+    }
+  } catch {
+    items.value = fallbackItems
+  }
+}
+
+async function loadProgress() {
+  try {
+    const response = await fetch(API_BASE_URL + '/progress')
+
+    if (!response.ok) {
+      throw new Error('Progress: HTTP ' + response.status)
     }
 
-    if (!progressResponse.ok) {
-      throw new Error('Progress: HTTP ' + progressResponse.status)
-    }
-
-    progress.value = await progressResponse.json()
+    progress.value = await response.json()
   } catch (caughtError) {
-    error.value = caughtError instanceof Error ? caughtError.message : 'Shop konnte nicht geladen werden.'
+    error.value = caughtError instanceof Error ? caughtError.message : 'Coins konnten nicht geladen werden.'
   }
 }
 
