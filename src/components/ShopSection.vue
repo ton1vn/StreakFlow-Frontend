@@ -39,8 +39,19 @@
 
     <div class="inventory">
       <div>
-        <span>Aktive XP Boosts</span>
-        <strong>{{ progress.activeXpBoosts }}</strong>
+        <span>Verfügbare XP Boosts</span>
+        <strong>{{ progress.availableXpBoosts }}</strong>
+        <button
+          class="use-button"
+          type="button"
+          :disabled="usingBoost || !nextAvailableBoost"
+          @click="useXpBoost"
+        >
+          {{ usingBoost ? 'Aktiviert ...' : nextAvailableBoost ? 'XP Boost aktivieren' : 'Kein Boost verfügbar' }}
+        </button>
+        <p v-if="progress.activeXpBoosts > 0" class="inventory-note">
+          Aktiv bis {{ formattedBoostExpiry }}
+        </p>
       </div>
 
       <div>
@@ -52,12 +63,14 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 interface Progress {
   coins: number
   streakFreezers: number
   activeXpBoosts: number
+  availableXpBoosts: number
+  activeXpBoostExpiresAt: string | null
 }
 
 interface ShopItem {
@@ -67,6 +80,16 @@ interface ShopItem {
   description: string
 }
 
+interface ShopPurchase {
+  id: number
+  itemId: string
+  itemName: string
+  cost: number
+  purchasedAt: string
+  usedAt: string | null
+  expiresAt: string | null
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://streakflow-backend-k8hh.onrender.com'
 
 const fallbackItems: ShopItem[] = [
@@ -74,7 +97,7 @@ const fallbackItems: ShopItem[] = [
     id: 'xp-boost',
     name: 'XP Boost',
     cost: 30,
-    description: 'Verdoppelt die XP deiner nächsten bestätigten Übung.',
+    description: 'Verdoppelt 24 Stunden lang die XP aller bestätigten Übungen.',
   },
   {
     id: 'streak-freeze',
@@ -89,10 +112,29 @@ const progress = ref<Progress>({
   coins: 0,
   streakFreezers: 0,
   activeXpBoosts: 0,
+  availableXpBoosts: 0,
+  activeXpBoostExpiresAt: null,
 })
+const purchases = ref<ShopPurchase[]>([])
 const buyingId = ref<string | null>(null)
+const usingBoost = ref(false)
 const message = ref('')
 const error = ref('')
+
+const nextAvailableBoost = computed(() => {
+  return purchases.value.find((purchase) => purchase.itemId === 'xp-boost' && !purchase.usedAt) ?? null
+})
+
+const formattedBoostExpiry = computed(() => {
+  if (!progress.value.activeXpBoostExpiresAt) {
+    return ''
+  }
+
+  return new Intl.DateTimeFormat('de-DE', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(new Date(progress.value.activeXpBoostExpiresAt))
+})
 
 function notifyProgressChanged() {
   window.dispatchEvent(new Event('streakflow-progress-updated'))
@@ -101,7 +143,7 @@ function notifyProgressChanged() {
 async function loadShop() {
   error.value = ''
 
-  await Promise.all([loadItems(), loadProgress()])
+  await Promise.all([loadItems(), loadProgress(), loadPurchases()])
 }
 
 async function loadItems() {
@@ -127,6 +169,18 @@ async function loadProgress() {
     progress.value = await response.json()
   } catch (caughtError) {
     error.value = caughtError instanceof Error ? caughtError.message : 'Coins konnten nicht geladen werden.'
+  }
+}
+
+async function loadPurchases() {
+  try {
+    const response = await fetch(API_BASE_URL + '/shop/purchases')
+
+    if (response.ok) {
+      purchases.value = await response.json()
+    }
+  } catch {
+    purchases.value = []
   }
 }
 
@@ -159,6 +213,34 @@ async function buyItem(item: ShopItem) {
     error.value = caughtError instanceof Error ? caughtError.message : 'Kauf fehlgeschlagen.'
   } finally {
     buyingId.value = null
+  }
+}
+
+async function useXpBoost() {
+  if (!nextAvailableBoost.value) {
+    return
+  }
+
+  usingBoost.value = true
+  message.value = ''
+  error.value = ''
+
+  try {
+    const response = await fetch(API_BASE_URL + '/shop/purchases/' + nextAvailableBoost.value.id + '/use', {
+      method: 'POST',
+    })
+
+    if (!response.ok) {
+      throw new Error('HTTP ' + response.status)
+    }
+
+    message.value = 'XP Boost ist jetzt für 24 Stunden aktiv.'
+    await loadShop()
+    notifyProgressChanged()
+  } catch (caughtError) {
+    error.value = caughtError instanceof Error ? caughtError.message : 'XP Boost konnte nicht aktiviert werden.'
+  } finally {
+    usingBoost.value = false
   }
 }
 
@@ -291,9 +373,29 @@ h3 {
   cursor: pointer;
 }
 
-.buy-button:disabled {
+.use-button {
+  width: 100%;
+  margin-top: 0.8rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.7rem 0.9rem;
+  color: #052e16;
+  background: linear-gradient(135deg, #86efac, #22c55e);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.buy-button:disabled,
+.use-button:disabled {
   cursor: default;
   opacity: 0.58;
+}
+
+.inventory-note {
+  margin: 0.45rem 0 0;
+  color: #bbf7d0;
+  font-size: 0.9rem;
+  font-weight: 800;
 }
 
 .inventory {
