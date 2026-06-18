@@ -1,5 +1,5 @@
 <template>
-  <section class="dashboard-card">
+  <section class="dashboard-card" data-testid="streak-list">
     <div class="section-header">
       <div>
         <p class="eyebrow">Live-Daten aus dem Backend</p>
@@ -44,7 +44,7 @@
 
     <p v-if="message" class="save-message">{{ message }}</p>
 
-    <div v-if="loading" class="state-box">
+    <div v-if="loading" class="state-box" data-testid="loading-state">
       <div class="spinner"></div>
       <p>Übungen werden geladen ...</p>
     </div>
@@ -83,6 +83,7 @@
           v-for="exercise in exercises"
           :key="exercise.id"
           class="exercise-card"
+          data-testid="exercise-card"
           :class="{ completed: completedExerciseIds.has(exercise.id) }"
         >
           <div class="exercise-card-header">
@@ -129,6 +130,7 @@
 
             <button
               class="complete-button"
+              data-testid="complete-workout-button"
               type="button"
               :disabled="completingId === exercise.id || completedExerciseIds.has(exercise.id)"
               @click="completeExercise(exercise)"
@@ -138,6 +140,34 @@
           </div>
         </article>
       </div>
+
+      <section class="executions-panel" data-testid="execution-list">
+        <div class="executions-header">
+          <div>
+            <p class="eyebrow">Ausführungen</p>
+            <h3>Absolvierte Workouts</h3>
+          </div>
+          <span>{{ executions.length }} gesamt</span>
+        </div>
+
+        <p v-if="executions.length === 0" class="execution-empty">
+          Noch keine Workouts abgeschlossen.
+        </p>
+
+        <div v-else class="execution-list">
+          <article v-for="execution in sortedExecutions" :key="execution.id" class="execution-row">
+            <div>
+              <strong>{{ execution.exerciseName }}</strong>
+              <span>{{ formatExecutionDate(execution.date) }}</span>
+            </div>
+            <div class="execution-rewards">
+              <span>{{ execution.duration }} min</span>
+              <span>{{ execution.earnedXp }} XP</span>
+              <span>{{ execution.earnedCoins }} Coins</span>
+            </div>
+          </article>
+        </div>
+      </section>
     </template>
   </section>
 </template>
@@ -218,6 +248,16 @@ const topCategory = computed(() => {
   return sortedCategories[0]?.[0] ?? '-'
 })
 
+const sortedExecutions = computed(() => {
+  return [...executions.value].sort((a, b) => {
+    if (a.date === b.date) {
+      return b.id - a.id
+    }
+
+    return b.date.localeCompare(a.date)
+  })
+})
+
 function coinsFor(minutes: number) {
   return Math.max(1, Math.floor(minutes / 10))
 }
@@ -228,6 +268,12 @@ function progressWidth(minutes: number) {
 
 function notifyProgressChanged() {
   window.dispatchEvent(new Event('streakflow-progress-updated'))
+}
+
+function formatExecutionDate(date: string) {
+  return new Intl.DateTimeFormat('de-DE', {
+    dateStyle: 'medium',
+  }).format(new Date(date + 'T12:00:00'))
 }
 
 async function loadAll() {
@@ -527,6 +573,72 @@ h2 {
   color: #f8fafc;
 }
 
+.executions-panel {
+  margin-top: 1.5rem;
+  padding: 1.15rem;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 24px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.executions-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.executions-header h3 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 1.25rem;
+}
+
+.executions-header span,
+.execution-empty {
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.execution-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.execution-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem;
+  border-radius: 18px;
+  background: rgba(30, 41, 59, 0.72);
+}
+
+.execution-row strong {
+  display: block;
+  color: #f8fafc;
+}
+
+.execution-row span {
+  color: #cbd5e1;
+}
+
+.execution-rewards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  font-weight: 800;
+}
+
+.execution-rewards span {
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.16);
+  color: #bbf7d0;
+}
+
 .exercise-card:hover {
   transform: translateY(-4px);
   border-color: rgba(34, 197, 94, 0.5);
@@ -660,6 +772,14 @@ h3 {
 
   .delete-button {
     margin-left: 0;
+  }
+
+  .execution-row {
+    display: grid;
+  }
+
+  .execution-rewards {
+    justify-content: flex-start;
   }
 }
 </style>

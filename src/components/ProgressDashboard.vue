@@ -1,14 +1,14 @@
 <template>
-  <div class="dashboard">
-    <div class="streak-card">
+  <div class="dashboard" data-testid="progress-dashboard">
+    <div class="streak-card" data-testid="current-streak">
       <h1>{{ progress.currentStreak }} Day Streak</h1>
       <p>Longest Streak: {{ progress.longestStreak }}</p>
     </div>
 
-    <div class="xp-card">
+    <div class="xp-card" data-testid="xp-card">
       <div class="xp-header">
         <span>Level {{ progress.level }}</span>
-        <span>{{ progress.xp }} XP</span>
+        <span data-testid="xp-value">{{ progress.xp }} XP</span>
       </div>
 
       <div class="xp-bar">
@@ -19,17 +19,17 @@
     </div>
 
     <div class="stats-grid">
-      <div class="stat-box">
+      <div class="stat-box" data-testid="coins-card">
         <h2>Coins</h2>
         <p>{{ progress.coins }}</p>
       </div>
 
-      <div class="stat-box">
+      <div class="stat-box" data-testid="freezer-card">
         <h2>Freezers</h2>
         <p>{{ progress.streakFreezers }}</p>
       </div>
 
-      <div class="stat-box">
+      <div class="stat-box" data-testid="daily-goal-card">
         <h2>Daily Goal</h2>
         <p>{{ progress.completedToday }} / {{ progress.dailyGoal }}</p>
       </div>
