@@ -2,6 +2,7 @@
 import ProgressDashboard from './components/ProgressDashboard.vue'
 import ShopSection from './components/ShopSection.vue'
 import StreakList from './components/StreakList.vue'
+import TeamChallenge from './components/TeamChallenge.vue'
 </script>
 
 <template>
@@ -24,6 +25,8 @@ import StreakList from './components/StreakList.vue'
     <ProgressDashboard />
 
     <ShopSection />
+
+    <TeamChallenge />
 
     <StreakList />
 
